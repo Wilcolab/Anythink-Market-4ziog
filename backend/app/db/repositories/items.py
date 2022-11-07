@@ -104,6 +104,7 @@ class ItemsRepository(BaseRepository):  # noqa: WPS214
         self,
         *,
         tag: Optional[str] = None,
+        title: Optional[str] = None,
         seller: Optional[str] = None,
         favorited: Optional[str] = None,
         limit: int = 20,
@@ -116,7 +117,7 @@ class ItemsRepository(BaseRepository):  # noqa: WPS214
         # fmt: off
         query = Query.from_(
             items,
-        ).select(
+        ).where(items.title.like(f"%{title}%")).select(
             items.id,
             items.slug,
             items.title,
