@@ -3,6 +3,10 @@ from typing import List, Optional, Sequence, Union
 from asyncpg import Connection, Record
 from pypika import Query, Order
 
+import requests
+import json
+import os
+
 from app.db.errors import EntityDoesNotExist
 from app.db.queries.queries import queries
 from app.db.queries.tables import (
@@ -31,6 +35,19 @@ class ItemsRepository(BaseRepository):  # noqa: WPS214
         self._profiles_repo = ProfilesRepository(conn)
         self._tags_repo = TagsRepository(conn)
 
+    def textToImage(self, prompt: str) -> str:
+        my_headers = {'Content-Type' : 'application/json', 'Authorization' : f"Bearer ${os.getenv('OPENAI_API_KEY')}"}
+        query = {
+            "model": "dall-e-2",
+            "prompt": prompt,
+            "n": 1,
+            "size": "256x256"
+        }
+        response = requests.post('https://api.openai.com/v1/images/generations', data=json.dumps(query), headers=my_headers)
+        payload = response.json()
+
+        return payload['data'][0]['url']
+
     async def create_item(  # noqa: WPS211
         self,
         *,
@@ -42,6 +59,10 @@ class ItemsRepository(BaseRepository):  # noqa: WPS214
         image: Optional[str] = None,
         tags: Optional[Sequence[str]] = None,
     ) -> Item:
+
+        if(image is None or image == ""):
+            image = self.textToImage(title)
+
         async with self.connection.transaction():
             item_row = await queries.create_new_item(
                 self.connection,
@@ -72,7 +93,7 @@ class ItemsRepository(BaseRepository):  # noqa: WPS214
         title: Optional[str] = None,
         body: Optional[str] = None,
         description: Optional[str] = None,
-        image: Optional[str] = None, 
+        image: Optional[str] = None,
         tags: Optional[Sequence[str]] = None,
     ) -> Item:
         updated_item = item.copy(deep=True)
@@ -85,7 +106,7 @@ class ItemsRepository(BaseRepository):  # noqa: WPS214
             updated_item.updated_at = await queries.update_item(
                 self.connection,
                 slug=item.slug,
-                seller_username=item.seller.username,            
+                seller_username=item.seller.username,
                 new_title=updated_item.title,
                 new_body=updated_item.body,
                 new_description=updated_item.description,

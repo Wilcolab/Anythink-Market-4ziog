@@ -7,7 +7,7 @@ services:
       sh -c "cd backend &&
             poetry install &&
             poetry export -f "requirements.txt" --without-hashes --with-credentials > "requirements.txt"
-            /wait-for-it.sh postgres-python:5432 -q -t 60 && 
+            /wait-for-it.sh postgres-python:5432 -q -t 60 &&
             poetry run alembic upgrade head &&
             poetry run gunicorn app.main:app --worker-class=uvicorn.workers.UvicornWorker --bind=0.0.0.0:3000 --workers=5"
     working_dir: /usr/src
@@ -21,6 +21,7 @@ services:
       - DEBUG=True
       - DATABASE_URL=postgresql://postgres:@postgres-python:5432/anythink-market
       - GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN=${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}
+      - OPENAI_API_KEY
     depends_on:
       - "postgres-python"
 
